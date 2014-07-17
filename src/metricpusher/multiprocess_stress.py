@@ -99,7 +99,6 @@ class MetricPusher(object):
                             count += 1
                             if count % 50000 == 0:
                                 time_delta = time.time() - last_time
-                                last_time = time.time()
                                 print "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
 
                             # Make a new metric

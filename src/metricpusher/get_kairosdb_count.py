@@ -6,12 +6,19 @@ import metrics
 
 metrics = metrics.metrics
 
+series = [
+          "cpu-3.cpu-interrupt",
+          "memory.memory.buffered.value",
+          "vmem.vmpage_io-memory",
+          "processes.ps_state.sleeping.value"
+        ]
+
 """
 Repeatedly counts all the data points for KairosDB under the stressTest tag
 """
 def getCount():
     total_count = 0
-    url = 'http://74.121.32.116:8080/api/v1/datapoints/query'
+    url = 'http://74.121.32.120:8080/api/v1/datapoints/query'
     for metric_name in metrics:
 
         payload = {
