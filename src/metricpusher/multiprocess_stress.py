@@ -32,7 +32,14 @@ class MetricPusher(object):
         self.suffix = "http_api_test"
 
         self.open_files = []
-        self.epoll = select.epoll()
+
+        # Check OS type
+        self.os = sys.platform
+
+        if self.os == 'linux2':
+            self.epoll = select.epoll()
+        elif self.os == 'darwin':
+            self.kq = select.kqueue()
 
         self.metrics = METRICS
 
@@ -46,24 +53,49 @@ class MetricPusher(object):
         if self.api == "telnet":
 
             # Threads
-            for thread_num in range(0, self.threads):
+            if self.os == 'linux2':
+                for thread_num in range(0, self.threads):
+                    # Open sockets for this thread
+                    open_sockets = {}
+                    for num in range(0, self.conns):
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+                        socket_fileno = sock.fileno()
+
+                        self.epoll.register(socket_fileno,
+                                            select.EPOLLOUT)
+
+                        open_sockets[socket_fileno] = sock
+                        print "Connecting to %s on port %s" % (self.remote,
+                                                               self.port)
+                        open_sockets[socket_fileno].connect((self.remote,
+                                                            self.port))
+
+                    # Start this process
+                    print "Starting process #%s" % thread_num
+                    p = Process(target=self._send, args=(open_sockets, ))
+                    p.start()
+            elif self.os == 'darwin':
+                print "Only a single thread/process"
                 # Open sockets for this thread
                 open_sockets = {}
                 for num in range(0, self.conns):
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
                     socket_fileno = sock.fileno()
+
+                    ev = select.kevent(socket_fileno,
+                                       filter=select.KQ_FILTER_WRITE,
+                                       flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
+                    self.kq.control([ev], 0, 0)
+
                     open_sockets[socket_fileno] = sock
                     print "Connecting to %s on port %s" % (self.remote,
                                                            self.port)
                     open_sockets[socket_fileno].connect((self.remote,
                                                         self.port))
-                    self.epoll.register(socket_fileno, select.EPOLLOUT)
 
-                # Start this process
-                print "Starting process #%s" % thread_num
-                p = Process(target=self._send, args=(open_sockets, ))
-                p.start()
+                self._send(open_sockets)
 
         elif self.api == "http":
             for num in range(0, self.threads):
@@ -82,38 +114,69 @@ class MetricPusher(object):
             try:
                 while True:
                     # Get our epoll events
-                    events = self.epoll.poll(5)
+                    if self.os == 'linux2':
+                        events = self.epoll.poll(5)
+                        for fileNum, event in events:
+                            if fileNum in open_sockets:
+                                count += 1
+                                if count % 50000 == 0:
+                                    time_delta = time.time() - last_time
+                                    print "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
 
-                    # Check if we're watching this
-                    for fileNum, event in events:
-                        if fileNum in open_sockets:
-                            count += 1
-                            if count % 50000 == 0:
-                                time_delta = time.time() - last_time
-                                print "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
+                                # Make a new metric
+                                metric = self.metrics[random.randint(0, len(self.metrics)-1)]
+                                metric_time = int(random.randint(ONE_YEAR_AGO, NOW))
+                                amount = random.randint(0, 1000000)
+                                tag = "stressTest"
 
-                            # Make a new metric
-                            metric = self.metrics[random.randint(0, len(self.metrics)-1)]
-                            metric_time = int(random.randint(ONE_YEAR_AGO, NOW))
-                            amount = random.randint(0, 1000000)
-                            tag = "stressTest"
+                                # InfluxDB requires a different format and doesn't support tags
+                                if self.engine == "influxdb":
+                                    # collectd_test_01.memory.memory.cached.value 2335620000 1404405000
+                                    message = "%s.%s %s %s\n" % (tag, metric, amount, metric_time)
 
-                            # InfluxDB requires a different format and doesn't support tags
-                            if self.engine == "influxdb":
-                                # collectd_test_01.memory.memory.cached.value 2335620000 1404405000
-                                message = "%s.%s %s %s\n" % (tag, metric, amount, metric_time)
+                                # OpenTSDB and KairosDB are pretty similar though
+                                else:
+                                    # put memory.memory.cached.value 1404405000000 2335620000 host=collectd_test_01
+                                    message = "put %s %s %s host=%s\n" % (metric, metric_time*1000, amount, tag)
 
-                            # OpenTSDB and KairosDB are pretty similar though
-                            else:
-                                # put memory.memory.cached.value 1404405000000 2335620000 host=collectd_test_01
-                                message = "put %s %s %s host=%s\n" % (metric, metric_time*1000, amount, tag)
+                                # Send message
+                                try:
+                                    data = open_sockets[fileNum].send(message)
+                                except SocketError:
+                                    # Stop watching this socket
+                                    self.epoll.modify(fileNum, 0)
 
-                            # Send message
-                            try:
-                                data = open_sockets[fileNum].send(message)
-                            except SocketError:
-                                # Stop watching this socket
-                                self.epoll.modify(fileNum, 0)
+                    elif self.os == 'darwin':
+                        revents = self.kq.control([], 6, None)
+                        for event in revents:
+                            if event.filter == select.KQ_FILTER_WRITE:
+                                count += 1
+                                if count % 50000 == 0:
+                                    time_delta = time.time() - last_time
+                                    print "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
+
+                                # Make a new metric
+                                metric = self.metrics[random.randint(0, len(self.metrics)-1)]
+                                metric_time = int(random.randint(ONE_YEAR_AGO, NOW))
+                                amount = random.randint(0, 1000000)
+                                tag = "stressTest"
+
+                                # InfluxDB requires a different format and doesn't support tags
+                                if self.engine == "influxdb":
+                                    # collectd_test_01.memory.memory.cached.value 2335620000 1404405000
+                                    message = "%s.%s %s %s\n" % (tag, metric, amount, metric_time)
+
+                                # OpenTSDB and KairosDB are pretty similar though
+                                else:
+                                    # put memory.memory.cached.value 1404405000000 2335620000 host=collectd_test_01
+                                    message = "put %s %s %s host=%s\n" % (metric, metric_time*1000, amount, tag)
+
+                                # Send message
+                                try:
+                                    data = open_sockets[event.ident].send(message)
+                                except SocketError:
+                                    # Stop watching this socket
+                                    pass
 
                     # Stop sending when we reach limit of metrics specified
                     if count > self.amount:
