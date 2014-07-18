@@ -7,6 +7,7 @@ import json
 import select
 import io
 
+
 class MetricPusher(object):
     def __init__(self, type, amount, engine, conns, remote, port):
         self.type = type

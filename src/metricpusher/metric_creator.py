@@ -1,6 +1,5 @@
 import random
 import argparse
-import time
 import sys
 import metrics
 
@@ -10,12 +9,11 @@ metrics = metrics.metrics
 now = 1404776380
 one_year_ago = 1404776380 - 31557600
 
-"""
-Generates fake random metrics using real metric names and stores in
-data/metric_#.csv files for use with metric_pusher.py
-"""
-def makeFakeMetrics(hosts, start_timestamp=one_year_ago, end_timestamp=now, resolution=10):
 
+def makeFakeMetrics(hosts, start_timestamp=one_year_ago, end_timestamp=now, resolution=10):
+    """Generates fake random metrics using real metric names and stores in
+    data/metric_#.csv files for use with metric_pusher.py
+    """
     tag = "random_host_"
 
     random.seed()

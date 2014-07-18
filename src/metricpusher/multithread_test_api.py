@@ -4,7 +4,6 @@ import sys
 import timeit
 import json
 import time
-from time import sleep
 from multiprocessing import Process
 import metrics
 
@@ -12,10 +11,9 @@ import metrics
 NOW = 1404776380
 ONE_YEAR_AGO = 1404776380 - 31557600
 
-"""
-Not sure what this does anymore
-"""
+
 class StressTester(object):
+    """Not sure what this does anymore"""
     def __init__(self, engine, processes):
         self.engine = engine
         self.processes = processes
@@ -25,13 +23,11 @@ class StressTester(object):
         elif self.engine == "kairosdb":
             self.url = 'http://74.121.32.116:8080/api/v1/datapoints/'
 
-
     def _setup(self):
         for num in range(0, self.processes):
             print "Starting process #%s" % self.processes
             p = Process(target=self._start)
             p.start()
-
 
     def _start(self):
         pass
@@ -71,7 +67,8 @@ class MultithreadTestAPI(object):
                     {
                         'name': metric_name+".0123456789",
                         'datapoints': [
-                            [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000, random.randint(0, 100)] for x in range(self.amount)
+                            [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000,
+                                random.randint(0, 100)] for x in range(self.amount)
                         ],
                         'tags': {
                             'host': 'sendTestHost'
@@ -86,7 +83,8 @@ class MultithreadTestAPI(object):
                         'name': metric_name+".0123456789",
                         'columns': ['time', 'value'],
                         'points': [
-                            [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000, random.randint(0, 100)] for x in range(self.amount)
+                            [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000,
+                                random.randint(0, 100)] for x in range(self.amount)
                         ]
                     }
                 ]
@@ -104,7 +102,8 @@ class MultithreadTestAPI(object):
                 {
                     'name': metric_name+".perfTest",
                     'datapoints': [
-                        [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000, random.randint(0, 100)] for x in range(amount)
+                        [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000,
+                            random.randint(0, 100)] for x in range(amount)
                     ],
                     'tags': {
                         'host': 'sendTestHost'
@@ -113,20 +112,19 @@ class MultithreadTestAPI(object):
             ]
             influx_time += timeit.timeit(self.sender, number=1)
 
-
             self.url = 'http://74.121.32.117:8086/db/test_graphite/series?u=root&p=root'
             self.payload = [
                 {
                     'name': metric_name+".perfTest",
                     'columns': ['time', 'value'],
                     'points': [
-                        [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000, random.randint(0, 100)] for x in range(amount)
+                        [int(random.randint(ONE_YEAR_AGO, NOW)) * 1000,
+                            random.randint(0, 100)] for x in range(amount)
                     ]
                 }
             ]
 
             kairos_time += timeit.timeit(self.sender, number=1)
-
 
         print "{:10.4f}\tInfluxDB".format(influx_time)
         print "{:10.4f}\tKairosDB".format(kairos_time)

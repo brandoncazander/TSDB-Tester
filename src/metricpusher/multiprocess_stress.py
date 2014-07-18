@@ -2,30 +2,25 @@ import sys
 import argparse
 import socket
 from socket import error as SocketError
-import errno
-import select
-import io
-from time import sleep
 from multiprocessing import Process
 import requests
 import json
 import random
 import time
 import metrics
+import select
 
 #Time Constants
 NOW = 1404776380
 ONE_YEAR_AGO = 1404776380 - 31557600
-
 CONN_DELAY = 1
-
 METRICS = metrics.metrics
 
-"""
-Stress-tests the specified storage engine by pushing as many randomly-generated
-metrics as possible over telnet or HTTP API
-"""
+
 class MetricPusher(object):
+    """Stress-tests the specified storage engine by pushing as many randomly-
+    generated metrics as possible over telnet or HTTP API
+    """
     def __init__(self, engine, api, amount, threads, conns, remote, port):
         self.amount = amount
         self.api = api
@@ -41,15 +36,13 @@ class MetricPusher(object):
 
         self.metrics = METRICS
 
-
-    """
-    Open files
-    Create threads
-    Open sockets and register with epoll
-    Start threads and call _send on each thread
-    """
     def _setup(self):
-
+        """
+        Open files
+        Create threads
+        Open sockets and register with epoll
+        Start threads and call _send on each thread
+        """
         if self.api == "telnet":
 
             # Threads
@@ -61,8 +54,10 @@ class MetricPusher(object):
 
                     socket_fileno = sock.fileno()
                     open_sockets[socket_fileno] = sock
-                    print "Connecting to %s on port %s" % (self.remote, self.port)
-                    open_sockets[socket_fileno].connect( (self.remote, self.port) )
+                    print "Connecting to %s on port %s" % (self.remote,
+                                                           self.port)
+                    open_sockets[socket_fileno].connect((self.remote,
+                                                        self.port))
                     self.epoll.register(socket_fileno, select.EPOLLOUT)
 
                 # Start this process
@@ -77,12 +72,8 @@ class MetricPusher(object):
                 p = Process(target=self._send, args=(None, ))
                 p.start()
 
-
-    """
-    Send over the open sockets
-    """
     def _send(self, open_sockets):
-
+        """Send over the open sockets"""
         count = 0
         last_time = time.time()
 
@@ -120,7 +111,7 @@ class MetricPusher(object):
                             # Send message
                             try:
                                 data = open_sockets[fileNum].send(message)
-                            except SocketError as e:
+                            except SocketError:
                                 # Stop watching this socket
                                 self.epoll.modify(fileNum, 0)
 
@@ -178,7 +169,6 @@ class MetricPusher(object):
                         }
                     ]
 
-
                 requests.post(self.url, data=json.dumps(payload))
 
                 # Stop sending when we reach limit of metrics specified
@@ -192,10 +182,9 @@ class MetricPusher(object):
     def run(self):
         self._setup()
 
-"""
-Parse arguments and run program
-"""
+
 def main():
+    """Parse arguments and run program"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--engine", help="influxdb | opentsdb | kairosdb", required=True)
     parser.add_argument("-a", "--api", help="telnet | http", required=True)

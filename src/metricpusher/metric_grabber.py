@@ -13,10 +13,10 @@ now = 1404776380
 one_year_ago = 1404776380 - 31557600
 
 
-"""
-Gets the specified amount of data points via HTTP API for all three storage engines
-"""
 class MetricGrabber(object):
+    """Gets the specified amount of data points via HTTP API
+    for all three storage engines.
+    """
     def __init__(self, amount):
         self.amount = amount
         self.points = 0
@@ -64,7 +64,6 @@ class MetricGrabber(object):
             resp = r.json()
             self.points = resp['queries'][0]['sample_size'] * self.amount
 
-
     def aggregateTest(self):
         if self.engine == "influxdb":
             self.remote = '74.121.32.117'
@@ -94,32 +93,30 @@ class MetricGrabber(object):
             self.remote = '74.121.32.116'
             self.url = 'http://74.121.32.116:8080/api/v1/datapoints/query'
             payload = {
-              "metrics": [
-                {
-                  "name": "memory.memory.used.value",
-                  "aggregators": [
+                "metrics": [
                     {
-                      "name": "sum",
-                      "sampling": {
-                        "value": "10",
-                        "unit": "minutes"
-                      }
+                        "name": "memory.memory.used.value",
+                        "aggregators": [
+                            {
+                                "name": "sum",
+                                "sampling": {
+                                    "value": "10",
+                                    "unit": "minutes"
+                                }
+                            }
+                        ]
                     }
-                  ]
+                ],
+                "start_relative": {
+                    "value": "5",
+                    "unit": "days"
                 }
-              ],
-              "start_relative": {
-                "value": "5",
-                "unit": "days"
-              }
             }
             r = requests.post(self.url, data=json.dumps(payload))
-            resp = r.json()
+            #resp = r.json()
             self.points = 180 * self.amount
 
-
     def sendTest(self):
-
         for metric_name in metrics:
             if self.engine == "kairosdb":
                 self.url = 'http://74.121.32.116:8080/api/v1/datapoints/'
@@ -127,7 +124,8 @@ class MetricGrabber(object):
                     {
                         'name': metric_name+".sendTest",
                         'datapoints': [
-                            [int(random.randint(one_year_ago, now)) * 1000, random.randint(0, 100)] for x in range(self.amount)
+                            [int(random.randint(one_year_ago, now)) * 1000,
+                                random.randint(0, 100)] for x in range(self.amount)
                         ],
                         'tags': {
                             'host': 'sendTestHost'
@@ -141,14 +139,13 @@ class MetricGrabber(object):
                         'name': metric_name+".sendTest",
                         'columns': ['time', 'value'],
                         'points': [
-                            [int(random.randint(one_year_ago, now)) * 1000, random.randint(0, 100)] for x in range(self.amount)
+                            [int(random.randint(one_year_ago, now)) * 1000,
+                                random.randint(0, 100)] for x in range(self.amount)
                         ]
                     }
                 ]
 
             requests.post(self.url, data=json.dumps(payload))
-
-
 
     def run(self):
         # print "*" * 50
@@ -191,7 +188,6 @@ class MetricGrabber(object):
         # perpoint = time / self.points
         # print "{:10}\t{:10.4f}\tKairosDB\t{:10.8f}".format(self.points, time, perpoint)
 
-
         print "*" * 50
         print "Sending %s points" % self.amount
 
@@ -206,8 +202,6 @@ class MetricGrabber(object):
         time = timeit.timeit(self.sendTest, number=1)
         perpoint = time / self.amount
         print "{:10}\t{:10.4f}\tKairosDB\t{:10.8f}".format(self.amount, time, perpoint)
-
-
 
 
 def main():

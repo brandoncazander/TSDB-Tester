@@ -7,27 +7,26 @@ import metrics
 metrics = metrics.metrics
 
 series = [
-          "cpu-3.cpu-interrupt",
-          "memory.memory.buffered.value",
-          "vmem.vmpage_io-memory",
-          "processes.ps_state.sleeping.value"
-        ]
+    "cpu-3.cpu-interrupt",
+    "memory.memory.buffered.value",
+    "vmem.vmpage_io-memory",
+    "processes.ps_state.sleeping.value"
+]
 
-"""
-Repeatedly counts all the data points for KairosDB under the stressTest tag
-"""
+
 def getCount():
+    """Repeatedly counts all the data points for KairosDB under the stressTest tag"""
     total_count = 0
     url = 'http://74.121.32.120:8080/api/v1/datapoints/query'
     for metric_name in metrics:
 
         payload = {
-                "metrics": [
+            "metrics": [
+                {
+                    "tags":
                     {
-                        "tags":
-                        {
-                            "host": ["stressTest"]
-                        },
+                        "host": ["stressTest"]
+                    },
                     "name": metric_name,
                     "aggregators": [
                         {
@@ -39,13 +38,13 @@ def getCount():
                         }
                     ]
                 }
-                ],
-                "cache_time": 0,
-                "start_relative": {
-                    "value": "1",
-                    "unit": "years"
-                }
+            ],
+            "cache_time": 0,
+            "start_relative": {
+                "value": "1",
+                "unit": "years"
             }
+        }
         r = requests.post(url, data=json.dumps(payload))
         resp = r.json()
         print resp

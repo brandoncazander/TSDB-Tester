@@ -28,6 +28,4 @@ for dirname, dirnames, filenames in os.walk('./data'):
                 w.write(message)
             f.close()
 
-
-
 w.close()

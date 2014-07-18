@@ -2,7 +2,6 @@ import sys
 import argparse
 import socket
 from socket import error as SocketError
-import errno
 import select
 import io
 from time import sleep
@@ -12,11 +11,11 @@ import json
 
 CONN_DELAY = 1
 
-"""
-Pushes metrics stored in form 'data/metric_#.csv' for each thread and pushes metrics over
-telnet or HTTP API
-"""
+
 class MetricPusher(object):
+    """Pushes metrics stored in form 'data/metric_#.csv' for each thread
+    and pushes metrics over telnet or HTTP API
+    """
     def __init__(self, engine, api, amount, threads, conns, remote, port):
         self.amount = amount
         self.api = api
@@ -30,14 +29,12 @@ class MetricPusher(object):
         self.open_files = []
         self.epoll = select.epoll()
 
-
-    """
-    Open files
-    Create threads
-    Open sockets and register with epoll
-    Start threads and call _send on each thread
-    """
     def _setup(self):
+        """Open files
+        Create threads
+        Open sockets and register with epoll
+        Start threads and call _send on each thread
+        """
         # Open files, one for each thread
         for num in range(0, self.threads):
             print "Opening file data/metric_%s.csv" % num
@@ -50,14 +47,15 @@ class MetricPusher(object):
                 # Open sockets for this thread
                 open_sockets = {}
                 for num in range(0, self.conns):
-                    # Found a small delay made sure nothing weird happened, but could probably remove now
+                    # Found a small delay made sure nothing weird happened,
+                    # but could probably remove now
                     sleep(CONN_DELAY)
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
                     socket_fileno = sock.fileno()
                     open_sockets[socket_fileno] = sock
                     print "Connecting to %s on port %s" % (self.remote, self.port)
-                    open_sockets[socket_fileno].connect( (self.remote, self.port) )
+                    open_sockets[socket_fileno].connect((self.remote, self.port))
                     self.epoll.register(socket_fileno, select.EPOLLOUT)
 
                 # Start this process
@@ -72,12 +70,8 @@ class MetricPusher(object):
                 p = Process(target=self._send, args=(file, None))
                 p.start()
 
-
-    """
-    Send over the open sockets
-    """
     def _send(self, file, open_sockets):
-
+        """Send over the open sockets"""
         count = 0
 
         if self.api == "telnet":
@@ -114,7 +108,7 @@ class MetricPusher(object):
                             # Send message
                             try:
                                 data = open_sockets[fileNum].send(message)
-                            except SocketError as e:
+                            except SocketError:
                                 # Stop watching this socket
                                 self.epoll.modify(fileNum, 0)
 
@@ -172,7 +166,6 @@ class MetricPusher(object):
                         }
                     ]
 
-
                 requests.post(self.url, data=json.dumps(payload))
 
                 # Stop sending when we reach limit of metrics specified
@@ -186,10 +179,9 @@ class MetricPusher(object):
     def run(self):
         self._setup()
 
-"""
-Parse arguments and run program
-"""
+
 def main():
+    """Parse arguments and run program"""
     parser = argparse.ArgumentParser()
     parser.add_argument("-e", "--engine", help="influxdb | opentsdb | kairosdb", required=True)
     parser.add_argument("-a", "--api", help="telnet | http", required=True)
