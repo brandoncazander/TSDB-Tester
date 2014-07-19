@@ -19,9 +19,9 @@ class StressTester(object):
         self.processes = processes
 
         if self.engine == "influxdb":
-            self.url = 'http://74.121.32.117:8086/db/test_graphite/series?u=root&p=root'
+            self.url = 'http://localhost:8086/db/test_graphite/series?u=root&p=root'
         elif self.engine == "kairosdb":
-            self.url = 'http://74.121.32.116:8080/api/v1/datapoints/'
+            self.url = 'http://localhost:8080/api/v1/datapoints/'
 
     def _setup(self):
         for num in range(0, self.processes):
@@ -46,7 +46,7 @@ class MultithreadTestAPI(object):
         print "*" * 50
 
         # Setup
-        self.url = 'http://74.121.32.117:8086/db/test_graphite/series?u=root&p=root'
+        self.url = 'http://localhost:8086/db/test_graphite/series?u=root&p=root'
 
         cur_test = 1
         self.amount = 5
@@ -62,7 +62,7 @@ class MultithreadTestAPI(object):
     def sender(self):
         for metric_name in metrics:
             if self.engine == "kairosdb":
-                self.url = 'http://74.121.32.116:8080/api/v1/datapoints/'
+                self.url = 'http://localhost:8080/api/v1/datapoints/'
                 self.payload = [
                     {
                         'name': metric_name+".0123456789",
@@ -77,7 +77,7 @@ class MultithreadTestAPI(object):
                 ]
 
             elif self.engine == "influxdb":
-                self.url = 'http://74.121.32.117:8086/db/test_graphite/series?u=root&p=root'
+                self.url = 'http://localhost:8086/db/test_graphite/series?u=root&p=root'
                 self.payload = [
                     {
                         'name': metric_name+".0123456789",
@@ -97,7 +97,7 @@ class MultithreadTestAPI(object):
         kairos_time = 0
 
         for metric_name in metrics:
-            self.url = 'http://74.121.32.116:8080/api/v1/datapoints/'
+            self.url = 'http://localhost:8080/api/v1/datapoints/'
             self.payload = [
                 {
                     'name': metric_name+".perfTest",
@@ -112,7 +112,7 @@ class MultithreadTestAPI(object):
             ]
             influx_time += timeit.timeit(self.sender, number=1)
 
-            self.url = 'http://74.121.32.117:8086/db/test_graphite/series?u=root&p=root'
+            self.url = 'http://localhost:8086/db/test_graphite/series?u=root&p=root'
             self.payload = [
                 {
                     'name': metric_name+".perfTest",

@@ -196,12 +196,12 @@ class MetricPusher(object):
         elif self.api == "http":
 
             if self.engine == "influxdb":
-                self.remote = '74.121.32.117'
-                self.url = 'http://74.121.32.117:8086/db/graphite/series?u=brandon&p=password'
+                self.remote = 'localhost'
+                self.url = 'http://localhost:8086/db/graphite/series?u=brandon&p=password'
 
             elif self.engine == "kairosdb":
-                self.remote = '74.121.32.116'
-                self.url = 'http://74.121.32.116:8080/api/v1/datapoints'
+                self.remote = 'localhost'
+                self.url = 'http://localhost:8080/api/v1/datapoints'
 
             while True:
 

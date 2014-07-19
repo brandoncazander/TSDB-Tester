@@ -23,8 +23,8 @@ class MetricGrabber(object):
 
     def runTest(self):
         if self.engine == "influxdb":
-            self.remote = '74.121.32.117'
-            self.url = 'http://74.121.32.117:8086/db/graphite/series'
+            self.remote = 'localhost'
+            self.url = 'http://locahost:8086/db/graphite/series'
             payload = {
                 'u': 'root',
                 'p': 'root',
@@ -35,8 +35,8 @@ class MetricGrabber(object):
             self.points = 28202 * self.amount
 
         elif self.engine == "opentsdb":
-            self.remote = '74.121.32.118'
-            self.url = 'http://74.121.32.118:4242/api/query'
+            self.remote = 'localhost'
+            self.url = 'http://localhost:4242/api/query'
             payload = {
                 'start': 1404545541,
                 'end': 1404755263,
@@ -47,8 +47,8 @@ class MetricGrabber(object):
             self.points = 21118 * self.amount
 
         elif self.engine == "kairosdb":
-            self.remote = '74.121.32.116'
-            self.url = 'http://74.121.32.116:8080/api/v1/datapoints/query'
+            self.remote = 'localhost'
+            self.url = 'http://localhost:8080/api/v1/datapoints/query'
             payload = {
                 'start_relative': {
                     'value': '5',
@@ -66,8 +66,8 @@ class MetricGrabber(object):
 
     def aggregateTest(self):
         if self.engine == "influxdb":
-            self.remote = '74.121.32.117'
-            self.url = 'http://74.121.32.117:8086/db/graphite/series'
+            self.remote = 'localhost'
+            self.url = 'http://localhost:8086/db/graphite/series'
             payload = {
                 'u': 'root',
                 'p': 'root',
@@ -78,8 +78,8 @@ class MetricGrabber(object):
             self.points = 705 * self.amount
 
         elif self.engine == "opentsdb":
-            self.remote = '74.121.32.118'
-            self.url = 'http://74.121.32.118:4242/api/query'
+            self.remote = 'localhost'
+            self.url = 'http://localhost:4242/api/query'
             payload = {
                 'start': 1404545541,
                 'end': 1404755263,
@@ -90,8 +90,8 @@ class MetricGrabber(object):
             self.points = 343 * self.amount
 
         elif self.engine == "kairosdb":
-            self.remote = '74.121.32.116'
-            self.url = 'http://74.121.32.116:8080/api/v1/datapoints/query'
+            self.remote = 'localhost'
+            self.url = 'http://localhost:8080/api/v1/datapoints/query'
             payload = {
                 "metrics": [
                     {
@@ -119,7 +119,7 @@ class MetricGrabber(object):
     def sendTest(self):
         for metric_name in metrics:
             if self.engine == "kairosdb":
-                self.url = 'http://74.121.32.116:8080/api/v1/datapoints/'
+                self.url = 'http://localhost:8080/api/v1/datapoints/'
                 payload = [
                     {
                         'name': metric_name+".sendTest",
@@ -133,7 +133,7 @@ class MetricGrabber(object):
                     }
                 ]
             elif self.engine == "influxdb":
-                self.url = 'http://74.121.32.117:8086/db/test_graphite/series?u=root&p=root'
+                self.url = 'http://localhost:8086/db/test_graphite/series?u=root&p=root'
                 payload = [
                     {
                         'name': metric_name+".sendTest",

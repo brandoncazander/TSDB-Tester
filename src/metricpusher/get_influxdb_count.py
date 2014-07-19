@@ -3,6 +3,8 @@ import timeit
 import time
 import metrics
 
+HOST = "localhost"
+PORT = 8086
 
 metrics = metrics.metrics
 series = [
@@ -17,7 +19,7 @@ def getCount():
     """Repeatedly gets the count of data points in InfluxDB"""
     total_count = 0
     for series_name in series:
-        url = 'http://74.121.32.119:8086/db/graphite/series'
+        url = 'http://%s:%s/db/graphite/series' % (HOST, str(PORT))
         payload = {
             'u': 'root',
             'p': 'root',

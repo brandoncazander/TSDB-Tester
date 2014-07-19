@@ -17,7 +17,9 @@ series = [
 def getCount():
     """Repeatedly counts all the data points for KairosDB under the stressTest tag"""
     total_count = 0
-    url = 'http://74.121.32.120:8080/api/v1/datapoints/query'
+    HOST = "localhost"
+    PORT = 8080
+    url = 'http://%s:%s/api/v1/datapoints/query' % (HOST, str(PORT))
     for metric_name in metrics:
 
         payload = {
