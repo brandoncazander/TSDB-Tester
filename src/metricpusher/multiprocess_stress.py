@@ -9,6 +9,7 @@ import random
 import time
 import metrics
 import select
+from sys import stdout
 
 #Time Constants
 NOW = 1404776380
@@ -121,7 +122,9 @@ class MetricPusher(object):
                                 count += 1
                                 if count % 50000 == 0:
                                     time_delta = time.time() - last_time
-                                    print "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
+                                    count_msg = "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
+                                    stdout.write("\r%s" % count_msg)
+                                    stdout.flush()
 
                                 # Make a new metric
                                 metric = self.metrics[random.randint(0, len(self.metrics)-1)]
@@ -153,7 +156,9 @@ class MetricPusher(object):
                                 count += 1
                                 if count % 50000 == 0:
                                     time_delta = time.time() - last_time
-                                    print "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
+                                    count_msg = "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
+                                    stdout.write("\r%s" % count_msg)
+                                    stdout.flush()
 
                                 # Make a new metric
                                 metric = self.metrics[random.randint(0, len(self.metrics)-1)]
