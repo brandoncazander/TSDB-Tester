@@ -1,8 +1,9 @@
 import sys
 import argparse
 import socket
+import collections
 from socket import error as SocketError
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 import requests
 import json
 import random
@@ -70,33 +71,32 @@ class MetricPusher(object):
                         print "Connecting to %s on port %s" % (self.remote,
                                                                self.port)
                         open_sockets[socket_fileno].connect((self.remote,
-                                                            self.port))
+                                                             self.port))
 
                     # Start this process
                     print "Starting process #%s" % thread_num
                     p = Process(target=self._send, args=(open_sockets, ))
                     p.start()
+
             elif self.os == 'darwin':
-                print "Only a single thread/process"
-                # Open sockets for this thread
-                open_sockets = {}
-                for num in range(0, self.conns):
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                for thread_num in range(0, self.threads):
+                    # Open sockets for this thread
+                    open_sockets = {}
+                    for num in range(0, self.conns):
+                        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-                    socket_fileno = sock.fileno()
+                        socket_fileno = sock.fileno()
 
-                    ev = select.kevent(socket_fileno,
-                                       filter=select.KQ_FILTER_WRITE,
-                                       flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE)
-                    self.kq.control([ev], 0, 0)
+                        open_sockets[socket_fileno] = sock
+                        print "Connecting to %s on port %s (fd=%d)" % (self.remote,
+                                                                       self.port, socket_fileno)
+                        open_sockets[socket_fileno].connect((self.remote,
+                                                             self.port))
 
-                    open_sockets[socket_fileno] = sock
-                    print "Connecting to %s on port %s" % (self.remote,
-                                                           self.port)
-                    open_sockets[socket_fileno].connect((self.remote,
-                                                        self.port))
-
-                self._send(open_sockets)
+                    # Start this process
+                    print "Starting process #%s" % thread_num
+                    p = Process(target=self._send, args=(open_sockets, ))
+                    p.start()
 
         elif self.api == "http":
             for num in range(0, self.threads):
@@ -109,6 +109,14 @@ class MetricPusher(object):
         """Send over the open sockets"""
         count = 0
         last_time = time.time()
+
+        if self.os == 'darwin':
+            kq = select.kqueue()
+            ev = []
+            for sock in open_sockets:
+                ev.append(select.kevent(sock,
+                          select.KQ_FILTER_WRITE,
+                          select.KQ_EV_ONESHOT | select.KQ_EV_ADD | select.KQ_EV_ENABLE))
 
         if self.api == "telnet":
 
@@ -150,7 +158,8 @@ class MetricPusher(object):
                                     self.epoll.modify(fileNum, 0)
 
                     elif self.os == 'darwin':
-                        revents = self.kq.control([], 6, None)
+
+                        revents = kq.control(ev, 1, None)
                         for event in revents:
                             if event.filter == select.KQ_FILTER_WRITE:
                                 count += 1
