@@ -175,6 +175,7 @@ class MetricPusher(object):
                                 count += 1
                                 if count % 5000 == 0:
                                     time_delta = time.time() - last_time
+                                    # Send the current stats to the queue
                                     status.put([process, count, int(count / time_delta)])
 
                                 # Make a new metric
@@ -208,6 +209,7 @@ class MetricPusher(object):
                                 count += 1
                                 if count % 5000 == 0:
                                     time_delta = time.time() - last_time
+                                    # Send the current stats to the queue
                                     status.put([process, count, int(count / time_delta)])
 
                                 # Make a new metric
