@@ -26,6 +26,6 @@ optional arguments:
 ```
 
 ###Dependencies
-requests==2.3.0
-termcolor==1.1.0
-wsgiref==0.1.2
+* requests==2.3.0
+* termcolor==1.1.0
+* wsgiref==0.1.2
