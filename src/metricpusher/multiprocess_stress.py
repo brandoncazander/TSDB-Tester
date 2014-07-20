@@ -11,6 +11,7 @@ import time
 import metrics
 import select
 from sys import stdout
+from termcolor import colored
 
 #Time Constants
 NOW = 1404776380
@@ -45,6 +46,28 @@ class MetricPusher(object):
 
         self.metrics = METRICS
 
+        self.per_thread_count = self.amount / self.threads
+
+    def print_status(self, numbers):
+        """ Print status line and percentage bar for each process """
+        sys.stdout.write('\033[2J\033[H')
+        total_count = 0
+        total_rate = 0
+        for process_num, tuple in numbers.items():
+            percent = (tuple[0] / float(self.per_thread_count))
+            bar = ('=' * int(percent * 30)).ljust(30)
+            count_msg = "Process %d: %7d/%d  (%5d metrics/sec) [%s]%2d%%\n" % (process_num,
+                                                                              tuple[0],
+                                                                              self.per_thread_count,
+                                                                              tuple[1],
+                                                                              colored(bar, 'blue'),
+                                                                              percent*100)
+            stdout.write(count_msg)
+            total_count += tuple[0]
+            total_rate += tuple[1]
+        stdout.write("    Total: %7d/%d (%6d metrics/sec)\n" % (total_count, self.amount, total_rate))
+        stdout.flush()
+
     def _setup(self):
         """
         Open files
@@ -52,6 +75,10 @@ class MetricPusher(object):
         Open sockets and register with epoll
         Start threads and call _send on each thread
         """
+        status = Queue()
+        workers = []
+        numbers = collections.OrderedDict()
+
         if self.api == "telnet":
 
             # Threads
@@ -75,8 +102,17 @@ class MetricPusher(object):
 
                     # Start this process
                     print "Starting process #%s" % thread_num
-                    p = Process(target=self._send, args=(open_sockets, ))
+                    p = Process(target=self._send, args=(open_sockets, status))
                     p.start()
+                    workers.append(p)
+                    numbers[thread_num] = (0, 0)
+
+                while any(i.is_alive() for i in workers):
+                    time.sleep(0.1)
+                    while not status.empty():
+                        process, s_count, s_rate = status.get()
+                        numbers[process] = (s_count, s_rate)
+                        self.print_status(numbers)
 
             elif self.os == 'darwin':
                 for thread_num in range(0, self.threads):
@@ -88,15 +124,24 @@ class MetricPusher(object):
                         socket_fileno = sock.fileno()
 
                         open_sockets[socket_fileno] = sock
-                        print "Connecting to %s on port %s (fd=%d)" % (self.remote,
-                                                                       self.port, socket_fileno)
+                        print "Connecting to %s on port %s" % (self.remote,
+                                                               self.port)
                         open_sockets[socket_fileno].connect((self.remote,
                                                              self.port))
 
                     # Start this process
                     print "Starting process #%s" % thread_num
-                    p = Process(target=self._send, args=(open_sockets, ))
+                    p = Process(target=self._send, args=(open_sockets, thread_num, status))
                     p.start()
+                    workers.append(p)
+                    numbers[thread_num] = (0, 0)
+
+                while any(i.is_alive() for i in workers):
+                    time.sleep(0.1)
+                    while not status.empty():
+                        process, s_count, s_rate = status.get()
+                        numbers[process] = (s_count, s_rate)
+                        self.print_status(numbers)
 
         elif self.api == "http":
             for num in range(0, self.threads):
@@ -105,7 +150,7 @@ class MetricPusher(object):
                 p = Process(target=self._send, args=(None, ))
                 p.start()
 
-    def _send(self, open_sockets):
+    def _send(self, open_sockets, process, status):
         """Send over the open sockets"""
         count = 0
         last_time = time.time()
@@ -128,11 +173,9 @@ class MetricPusher(object):
                         for fileNum, event in events:
                             if fileNum in open_sockets:
                                 count += 1
-                                if count % 50000 == 0:
+                                if count % 5000 == 0:
                                     time_delta = time.time() - last_time
-                                    count_msg = "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
-                                    stdout.write("\r%s" % count_msg)
-                                    stdout.flush()
+                                    status.put([process, count, int(count / time_delta)])
 
                                 # Make a new metric
                                 metric = self.metrics[random.randint(0, len(self.metrics)-1)]
@@ -163,11 +206,9 @@ class MetricPusher(object):
                         for event in revents:
                             if event.filter == select.KQ_FILTER_WRITE:
                                 count += 1
-                                if count % 50000 == 0:
+                                if count % 5000 == 0:
                                     time_delta = time.time() - last_time
-                                    count_msg = "Count: %s (%s metrics/sec)" % (count, int(count / time_delta))
-                                    stdout.write("\r%s" % count_msg)
-                                    stdout.flush()
+                                    status.put([process, count, int(count / time_delta)])
 
                                 # Make a new metric
                                 metric = self.metrics[random.randint(0, len(self.metrics)-1)]
@@ -193,8 +234,10 @@ class MetricPusher(object):
                                     pass
 
                     # Stop sending when we reach limit of metrics specified
-                    if count > self.amount:
+                    if (count*self.threads) == self.amount:
                         # Break out of while loop
+                        time_delta = time.time() - last_time
+                        status.put([process, count, int(count / time_delta)])
                         break
 
             finally:
