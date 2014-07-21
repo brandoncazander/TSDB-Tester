@@ -1,7 +1,6 @@
 import sys
 import argparse
 import socket
-import collections
 from socket import error as SocketError
 from multiprocessing import Process, Queue
 import requests
@@ -48,6 +47,8 @@ class MetricPusher(object):
 
         self.per_thread_count = self.amount / self.threads
 
+        self.max = 0
+
     def print_status(self, numbers):
         """ Print status line and percentage bar for each process """
         sys.stdout.write('\033[2J\033[H')
@@ -57,15 +58,17 @@ class MetricPusher(object):
             percent = (tuple[0] / float(self.per_thread_count))
             bar = ('=' * int(percent * 30)).ljust(30)
             count_msg = "Process %d: %7d/%d  (%5d metrics/sec) [%s]%2d%%\n" % (process_num,
-                                                                              tuple[0],
-                                                                              self.per_thread_count,
-                                                                              tuple[1],
-                                                                              colored(bar, 'blue'),
-                                                                              percent*100)
+                                                                               tuple[0],
+                                                                               self.per_thread_count,
+                                                                               tuple[1],
+                                                                               colored(bar, 'blue'),
+                                                                               percent*100)
             stdout.write(count_msg)
             total_count += tuple[0]
             total_rate += tuple[1]
         stdout.write("    Total: %7d/%d (%6d metrics/sec)\n" % (total_count, self.amount, total_rate))
+        if total_rate > self.max:
+            self.max = total_rate
         stdout.flush()
 
     def _setup(self):
@@ -77,7 +80,7 @@ class MetricPusher(object):
         """
         status = Queue()
         workers = []
-        numbers = collections.OrderedDict()
+        numbers = {}
 
         if self.api == "telnet":
 
@@ -102,7 +105,7 @@ class MetricPusher(object):
 
                     # Start this process
                     print "Starting process #%s" % thread_num
-                    p = Process(target=self._send, args=(open_sockets, status))
+                    p = Process(target=self._send, args=(open_sockets, thread_num, status))
                     p.start()
                     workers.append(p)
                     numbers[thread_num] = (0, 0)
@@ -303,6 +306,7 @@ class MetricPusher(object):
     """
     def run(self):
         self._setup()
+        print "Max rate: %d metrics/sec" % self.max
 
 
 def main():
